@@ -8,6 +8,10 @@ from typing import Tuple, Any
 import logging
 from flask import Flask, request, jsonify, Response
 from nexus.core.core_engine import CognitiveCore
+from nexus.api.routes.memory import memory_bp, initialize_memory_system
+from nexus.api.routes.rag import rag_bp, initialize_rag_system
+from nexus.api.routes.reasoning import reasoning_bp, initialize_reasoning_system
+from nexus.api.routes.data import data_bp, initialize_data_system
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 engine = CognitiveCore()
+
+# Register route blueprints
+app.register_blueprint(memory_bp)
+app.register_blueprint(rag_bp)
+app.register_blueprint(reasoning_bp)
+app.register_blueprint(data_bp)
 
 
 @app.route("/health", methods=["GET"])
@@ -105,6 +115,37 @@ def internal_error(error: Any) -> Tuple[Response, int]:
     return jsonify({"error": "Internal server error"}), 500
 
 
-if __name__ == "__main__":
+def initialize_subsystems(config: dict = None):
+    """Initialize all API subsystems with optional config."""
+    config = config or {}
+    try:
+        initialize_memory_system(config)
+        logger.info("Memory subsystem initialized")
+    except Exception as e:
+        logger.warning("Memory subsystem initialization failed: %s", e)
+    try:
+        initialize_rag_system(config)
+        logger.info("RAG subsystem initialized")
+    except Exception as e:
+        logger.warning("RAG subsystem initialization failed: %s", e)
+    try:
+        initialize_reasoning_system(config)
+        logger.info("Reasoning subsystem initialized")
+    except Exception as e:
+        logger.warning("Reasoning subsystem initialization failed: %s", e)
+    try:
+        initialize_data_system(config)
+        logger.info("Data subsystem initialized")
+    except Exception as e:
+        logger.warning("Data subsystem initialization failed: %s", e)
+
+
+def main():
+    """Entry point for nexus-api."""
+    initialize_subsystems()
     logger.info("Starting TheNexus API server on port 5000")
     app.run(host="0.0.0.0", port=5000, debug=False)
+
+
+if __name__ == "__main__":
+    main()

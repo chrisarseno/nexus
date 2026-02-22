@@ -1,7 +1,8 @@
 """
 Nexus Monitoring UI Components
 
-Dashboard and visualization components for system monitoring.
+Monitoring dashboards are integrated into the main PySide6 GUI.
+See nexus.gui.views.monitoring for the production implementation.
 """
 
 __all__ = []
