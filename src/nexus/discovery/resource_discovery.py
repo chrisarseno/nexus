@@ -44,6 +44,7 @@ class ResourceSource(str, Enum):
     MANUAL = "manual"
     ZUULTIMATE = "zuultimate"  # Identity/access/vault services
     VINZY = "vinzy"  # License management
+    SEC_EDGAR = "sec_edgar"  # SEC EDGAR filings
 
 
 @dataclass

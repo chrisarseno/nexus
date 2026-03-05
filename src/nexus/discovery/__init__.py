@@ -23,6 +23,7 @@ from .ollama_integration import OllamaIntegration
 from .web_search_integration import WebSearchIntegration
 from .local_machine_integration import LocalMachineIntegration
 from .zuultimate_integration import ZuultimateIntegration, ZuultimateConfig
+from .sec_edgar_integration import SECEdgarIntegration
 from .vinzy_integration import VinzyIntegration, VinzyConfig
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
     "LocalMachineIntegration",
     "ZuultimateIntegration",
     "ZuultimateConfig",
+    "SECEdgarIntegration",
     "VinzyIntegration",
     "VinzyConfig",
 ]
