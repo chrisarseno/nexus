@@ -175,6 +175,11 @@ class PersistentUsageTracker:
                 end_date=end_time,
             )
 
+        # Normalize entry timestamps to tz-aware (SQLite returns naive)
+        for e in all_entries:
+            if e.timestamp and e.timestamp.tzinfo is None:
+                e.timestamp = e.timestamp.replace(tzinfo=timezone.utc)
+
         hourly_stats = []
 
         for i in range(hours):

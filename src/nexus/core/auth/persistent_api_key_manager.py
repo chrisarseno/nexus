@@ -14,6 +14,16 @@ from nexus.core.auth.models import APIKey, User, UserRole
 from nexus.core.database import get_db
 from nexus.core.database.repositories import UserRepository, APIKeyRepository, RateLimitRepository
 
+
+class _UserProxy:
+    """Dict-like proxy for DB-backed user lookups (compatibility with in-memory manager)."""
+
+    def __init__(self, manager):
+        self._manager = manager
+
+    def get(self, user_id, default=None):
+        return self._manager.get_user(user_id) or default
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,6 +43,7 @@ class PersistentAPIKeyManager:
     def __init__(self):
         """Initialize the API key manager."""
         self.db = get_db()
+        self.users = _UserProxy(self)
         logger.info("PersistentAPIKeyManager initialized")
 
     def _hash_key(self, raw_key: str) -> str:
@@ -208,8 +219,11 @@ class PersistentAPIKeyManager:
                 logger.warning(f"API key {key_model.key_id} is inactive")
                 return None
 
-            # Check expiration
-            if key_model.expires_at and datetime.now(timezone.utc) > key_model.expires_at:
+            # Check expiration (SQLite returns naive datetimes, normalize)
+            expires_at = key_model.expires_at
+            if expires_at and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if expires_at and datetime.now(timezone.utc) > expires_at:
                 logger.warning(f"API key {key_model.key_id} has expired")
                 return None
 
@@ -230,34 +244,52 @@ class PersistentAPIKeyManager:
                 usage_count=key_model.usage_count + 1,  # Just incremented
             )
 
-    def check_rate_limit(self, api_key: APIKey) -> bool:
+    def check_rate_limit(self, key_id: str) -> "RateLimitInfo":
         """
-        Check if API key is within rate limit.
+        Check rate limit for an API key.
 
         Args:
-            api_key: APIKey object
+            key_id: API key ID
 
         Returns:
-            True if within rate limit, False otherwise
+            RateLimitInfo with current status
         """
+        from nexus.core.auth.models import RateLimitInfo
+
         with self.db.get_session() as session:
             rate_limit_repo = RateLimitRepository(session)
 
             # Get count of requests in last hour
-            count = rate_limit_repo.get_count_last_hour(api_key.key_id)
+            count = rate_limit_repo.get_count_last_hour(key_id)
 
-            # Check against limit
-            if count >= api_key.rate_limit:
+            # Look up the key to get its rate limit
+            api_key_repo = APIKeyRepository(session)
+            key_model = api_key_repo.get_by_id(key_id)
+            limit = key_model.rate_limit if key_model else 100
+            remaining = max(0, limit - count)
+
+            reset_at = datetime.now(timezone.utc) + timedelta(hours=1)
+            retry_after = None
+            if remaining == 0:
+                retry_after = 3600
                 logger.warning(
-                    f"Rate limit exceeded for key {api_key.key_id}: "
-                    f"{count}/{api_key.rate_limit}"
+                    f"Rate limit exceeded for key {key_id}: "
+                    f"{count}/{limit}"
                 )
-                return False
 
             # Record this request
-            rate_limit_repo.record(api_key.key_id)
+            rate_limit_repo.record(key_id)
 
-            return True
+            return RateLimitInfo(
+                limit=limit,
+                remaining=remaining,
+                reset_at=reset_at,
+                retry_after=retry_after,
+            )
+
+    def record_request(self, key_id: str):
+        """Record a request for rate limiting (already done in check_rate_limit)."""
+        pass
 
     def revoke_key(self, key_id: str):
         """

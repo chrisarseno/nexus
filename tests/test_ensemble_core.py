@@ -10,11 +10,11 @@ from nexus.core import ensemble_core
 def test_rank_responses_and_ensemble(monkeypatch):
     scores = [0.2, 0.9, 0.4, 0.1]
     iter_scores = iter(scores)
-    monkeypatch.setattr(ensemble_core, "score_response", lambda _: next(iter_scores))
+    monkeypatch.setattr(ensemble_core, "score_response", lambda *_args: next(iter_scores))
     ranked = ensemble_core.rank_responses("hello")
     assert [name for _, _, name in ranked] == ["llama-3", "mistral", "gpt-4", "claude"]
 
     iter_scores = iter(scores)
-    monkeypatch.setattr(ensemble_core, "score_response", lambda _: next(iter_scores))
+    monkeypatch.setattr(ensemble_core, "score_response", lambda *_args: next(iter_scores))
     top = ensemble_core.ensemble_inference("hello")
     assert top == "[llama-3] Response to: 'hello'"

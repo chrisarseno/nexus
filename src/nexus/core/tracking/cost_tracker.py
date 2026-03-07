@@ -122,11 +122,17 @@ class CostTracker:
         # Default to current month
         if start_date is None:
             now = datetime.now(timezone.utc)
-            start_date = datetime(now.year, now.month, 1)
+            start_date = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
         
         if end_date is None:
             end_date = datetime.now(timezone.utc)
-        
+
+        # Normalize to tz-aware for comparison with tz-aware entries
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
         # Filter entries
         filtered_entries = [
             e for e in self.entries
@@ -171,7 +177,7 @@ class CostTracker:
     def get_daily_cost(self) -> float:
         """Get total cost for today."""
         now = datetime.now(timezone.utc)
-        start_of_day = datetime(now.year, now.month, now.day)
+        start_of_day = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
         summary = self.get_summary(start_date=start_of_day)
         return summary.total_cost
     
