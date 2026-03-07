@@ -24,7 +24,7 @@ Homepage = "https://github.com/chrisarseno/Nexus"
 nexus-gui = "nexus.gui:run"
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "mypy", "python-dotenv"]
+dev = ["pytest", "ruff", "mypy", "python-dotenv", "aiohttp", "flask", "tenacity", "prometheus-client", "PyPDF2"]
 server = ["fastapi", "uvicorn[standard]", "pydantic", "requests"]
 mcp = ["mcp>=1.0.0"]
 embeddings = ["sentence-transformers>=2.2.0"]
